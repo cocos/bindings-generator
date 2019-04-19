@@ -1669,26 +1669,6 @@ class Generator(object):
                     return namespace_class_name.replace("*","").replace("const ", "").replace(k,v)
         return namespace_class_name.replace("*","").replace("const ","")
 
-
-    def api_param_name_from_native(self,native_name):
-        lower_name = native_name.lower()
-        if lower_name == "std::string" or lower_name == 'string' or lower_name == 'basic_string' or lower_name == 'std::basic_string':
-            return "str"
-
-        if lower_name.find("unsigned ") >= 0 :
-            return native_name.replace("unsigned ","")
-
-        if lower_name.find("unordered_map") >= 0 or lower_name.find("map") >= 0:
-            return "map"
-
-        if lower_name.find("vector") >= 0 :
-            return "array"
-
-        if lower_name == "std::function":
-            return "func"
-        else:
-            return lower_name
-
     def js_ret_name_from_native(self, namespace_class_name, is_enum) :
         if self.is_cocos_class(namespace_class_name):
             if namespace_class_name.find("cocos2d::Vector") >=0:
