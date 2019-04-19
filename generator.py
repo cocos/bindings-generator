@@ -877,16 +877,6 @@ class NativeFunction(object):
                                 searchList=[current_class, self])
         if not is_override:
             gen.impl_file.write(str(tpl))
-        if not is_ctor:
-            apidoc_function_script = Template(file=os.path.join(gen.target,
-                                                            "templates",
-                                                            "apidoc_function.script"),
-                                          searchList=[current_class, self])
-            if gen.script_type == "spidermonkey":
-                gen.doc_file.write(str(apidoc_function_script))
-            else:
-                if gen.script_type == "lua" and current_class != None :
-                    current_class.doc_func_file.write(str(apidoc_function_script))
 
 
 class NativeOverloadedFunction(object):
@@ -980,21 +970,6 @@ class NativeOverloadedFunction(object):
                             searchList=[current_class, self])
         if not is_override:
             gen.impl_file.write(str(tpl))
-
-        if current_class != None and not is_ctor:
-            if gen.script_type == "lua":
-                apidoc_function_overload_script = Template(file=os.path.join(gen.target,
-                                                        "templates",
-                                                        "apidoc_function_overload.script"),
-                                      searchList=[current_class, self])
-                current_class.doc_func_file.write(str(apidoc_function_overload_script))
-            else:
-                if gen.script_type == "spidermonkey":
-                    apidoc_function_overload_script = Template(file=os.path.join(gen.target,
-                                                        "templates",
-                                                        "apidoc_function_overload.script"),
-                                      searchList=[current_class, self])
-                    gen.doc_file.write(str(apidoc_function_overload_script))
 
 
 class NativeClass(object):
@@ -1107,7 +1082,6 @@ class NativeClass(object):
 
         self.generator.head_file.write(str(prelude_h))
         self.generator.impl_file.write(str(prelude_c))
-        self.generator.doc_file.write(str(apidoc_classhead_script))
         for m in self.methods_clean():
             m['impl'].generate_code(self)
         for m in self.static_methods_clean():
@@ -1121,12 +1095,7 @@ class NativeClass(object):
         # generate register section
         register = Template(file=os.path.join(self.generator.target, "templates", "register.c"),
                             searchList=[{"current_class": self}])
-        apidoc_classfoot_script = Template(file=os.path.join(self.generator.target,
-                                                         "templates",
-                                                         "apidoc_classfoot.script"),
-                                       searchList=[{"current_class": self}])
         self.generator.impl_file.write(str(register))
-        self.generator.doc_file.write(str(apidoc_classfoot_script))
         if self.generator.script_type == "lua":
             apidoc_fun_foot_script  = Template(file=os.path.join(self.generator.target,
                                                          "templates",
@@ -1501,29 +1470,17 @@ class Generator(object):
         implfilepath = os.path.join(self.outdir, self.out_file + ".cpp")
         headfilepath = os.path.join(self.outdir, self.out_file + ".hpp")
 
-        docfiledir   = self.outdir + "/api"
-        if not os.path.exists(docfiledir):
-            os.makedirs(docfiledir)
-
-        if self.script_type == "lua":
-            docfilepath = os.path.join(docfiledir, self.out_file + "_api.lua")
-        else:
-            docfilepath = os.path.join(docfiledir, self.out_file + "_api.js")
 
         self.impl_file = open(implfilepath, "w+")
         self.head_file = open(headfilepath, "w+")
-        self.doc_file = open(docfilepath, "w+")
 
         layout_h = Template(file=os.path.join(self.target, "templates", "layout_head.h"),
                             searchList=[self])
         layout_c = Template(file=os.path.join(self.target, "templates", "layout_head.c"),
                             searchList=[self])
-        apidoc_ns_script = Template(file=os.path.join(self.target, "templates", "apidoc_ns.script"),
-                                searchList=[self])
+
         self.head_file.write(str(layout_h))
         self.impl_file.write(str(layout_c))
-        self.doc_file.write(str(apidoc_ns_script))
-
         self._parse_headers()
 
         layout_h = Template(file=os.path.join(self.target, "templates", "layout_foot.h"),
@@ -1532,14 +1489,9 @@ class Generator(object):
                             searchList=[self])
         self.head_file.write(str(layout_h))
         self.impl_file.write(str(layout_c))
-        if self.script_type == "lua":
-            apidoc_ns_foot_script = Template(file=os.path.join(self.target, "templates", "apidoc_ns_foot.script"),
-                                searchList=[self])
-            self.doc_file.write(str(apidoc_ns_foot_script))
 
         self.impl_file.close()
         self.head_file.close()
-        self.doc_file.close()
 
 
     def _pretty_print(self, diagnostics):
