@@ -1,7 +1,7 @@
-\#include "scripting/js-bindings/auto/${out_file}.hpp"
 #if $macro_judgement
 $macro_judgement
 #end if
+\#include "scripting/js-bindings/auto/${out_file}.hpp"
 \#include "scripting/js-bindings/manual/jsb_conversions.hpp"
 \#include "scripting/js-bindings/manual/jsb_global.h"
 #for header in $headers
