@@ -36,7 +36,7 @@ static bool js_${current_class.underlined_class_name}_finalize(se::State& s)
     {
         se::NonRefNativePtrCreatedByCtorMap::erase(iter);
         ${current_class.namespaced_class_name}* cobj = (${current_class.namespaced_class_name}*)s.nativeThisObject();
-        delete cobj;
+        JSB_FREE(cobj);
     }
         #end if
     #end if
@@ -62,7 +62,7 @@ static bool js_${current_class.underlined_class_name}_${current_class.rename_des
     {
         se::NonRefNativePtrCreatedByCtorMap::erase(iter);
         ${current_class.namespaced_class_name}* cobj = (${current_class.namespaced_class_name}*)s.nativeThisObject();
-        delete cobj;
+        JSB_FREE(cobj);
     }
         #end if
     #end if

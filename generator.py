@@ -1032,6 +1032,10 @@ class NativeClass(object):
         self.parse()
 
     @property
+    def is_skip_constructor(self):
+        return self.generator.skip_constructor(self.class_name)
+
+    @property
     def underlined_class_name(self):
         return self.namespaced_class_name.replace("::", "_")
 
@@ -1451,6 +1455,9 @@ class Generator(object):
 
     def rename_destructor(self, class_name):
         return self.should_rename_function(class_name, "~" + class_name)
+
+    def skip_constructor(self, class_name):
+        return self.should_skip(class_name, class_name)
 
     def in_listed_classes(self, class_name):
         """

@@ -4,6 +4,11 @@ SE_DECLARE_FINALIZE_FUNC(js_${underlined_class_name}_finalize)
 
 static bool ${signature_name}(se::State& s)
 {
+#if $is_skip_constructor
+    //#1 ${namespaced_class_name}: is_skip_construtor ${is_skip_constructor}
+    se::ScriptEngine::getInstance()->evalString("throw new Error(\"${namespaced_class_name} constructor is skipped\")");
+    return false;
+#else
     CC_UNUSED bool ok = true;
     const auto& args = s.args();
     size_t argc = args.size();
@@ -44,8 +49,12 @@ static bool ${signature_name}(se::State& s)
                 #end if
             #end while
         #end if
-        #set $arg_list = ", ".join($arg_array)
-            ${namespaced_class_name}* cobj = new (std::nothrow) ${namespaced_class_name}($arg_list);
+        #if len($arg_array) == 0
+        #set $arg_list=""
+        #else
+        #set $arg_list = ", " + ", ".join($arg_array)
+        #end if
+            ${namespaced_class_name}* cobj = JSB_ALLOC(${namespaced_class_name}$arg_list);
             s.thisObject()->setPrivateData(cobj);
             #if not $is_ref_class
             se::NonRefNativePtrCreatedByCtorMap::emplace(cobj);
@@ -59,5 +68,6 @@ static bool ${signature_name}(se::State& s)
 #end for
     SE_REPORT_ERROR("wrong number of arguments: %d", (int)argc);
     return false;
+#end if
 }
 SE_BIND_CTOR(${signature_name}, __jsb_${underlined_class_name}_class, js_${underlined_class_name}_finalize)
