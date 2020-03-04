@@ -1026,6 +1026,7 @@ class NativeClass(object):
         self.has_constructor  = False
         self.namespace_name   = ""
         self.is_struct = is_struct
+        self.getter_setter = []
 
         registration_name = generator.get_class_or_rename_class(self.class_name)
         if generator.remove_prefix:
@@ -1035,6 +1036,18 @@ class NativeClass(object):
         self.namespaced_class_name = get_namespaced_class_name(cursor)
         self.namespace_name        = get_namespace_name(cursor)
         self.parse()
+        # post parse
+        if self.class_name in generator.getter_setter :
+            for field_name in generator.getter_setter[self.class_name].iterkeys():
+                field = generator.getter_setter[self.class_name][field_name]
+                item = {
+                    "name" : field_name,
+                    "getter" : self.find_method(field["getter"]),
+                    "setter" : self.find_method(field["setter"]),
+                }
+                if item["getter"] is None and item["setter"] is None:
+                   raise Exception("getter_setter for %s.%s both None" %(self.class_name, field_name))
+                self.getter_setter.append(item)
 
     @property
     def is_skip_constructor(self):
@@ -1043,6 +1056,18 @@ class NativeClass(object):
     @property
     def underlined_class_name(self):
         return self.namespaced_class_name.replace("::", "_")
+
+
+    def skip_bind_function(self, method_name):
+        if self.class_name in self.generator.shadowed_methods_by_getter_setter :
+            return method_name in self.generator.shadowed_methods_by_getter_setter[self.class_name]
+        return False
+
+    def find_method(self, method_name): 
+        for m in self.methods :
+            if self.methods[m].signature_name == method_name :
+                return self.methods[m]
+        return None
 
     def parse(self):
         '''
@@ -1334,6 +1359,8 @@ class Generator(object):
         self.hpp_headers = opts['hpp_headers']
         self.cpp_headers = opts['cpp_headers']
         self.win32_clang_flags = opts['win32_clang_flags']
+        self.getter_setter = {}
+        self.shadowed_methods_by_getter_setter = {}
 
         extend_clang_args = []
 
@@ -1400,6 +1427,36 @@ class Generator(object):
             for replace in list_of_replace_headers:
                 header, replaced_header = replace.split("::")
                 self.replace_headers[header] = replaced_header
+        
+        if "getter_setter" in opts :
+            list_of_getter_setter = re.split(",\n?", opts['getter_setter'])
+            for line in list_of_getter_setter:
+                gs_kls, gs_fields_txt = line.split("::")
+                gs_obj = self.getter_setter[gs_kls] = {}
+                gs_sd = self.shadowed_methods_by_getter_setter[gs_kls] = []
+                match = re.match("\[([^]]+)\]",gs_fields_txt)
+                if match: 
+                    list_of_fields = match.group(1).split(" ")
+                    for field in list_of_fields:
+                        field_component = field.split(",")
+                        if len(field_component) == 1:
+                            getter = field
+                            #getter = "get" + field.capitalize()
+                            gs_obj[field] = {"getter": getter , "setter": "set"+field.capitalize()}
+                            gs_sd.extend([field, getter, "set"+ field.capitalize()])
+                        elif len(field_component) == 2:
+                            field = field_component[0]
+                            gs_obj[field] = {"getter": field_component[1], "setter": "set"+field.capitalize()}
+                            gs_sd.extend([field, field_component[1], "set"+ field.capitalize()])
+                        elif len(field_component) == 3:
+                            field = field_component[0]
+                            getter = field_component[1] if len(field_component[1]) > 0 else "get"+field.capitalize()
+                            setter = field_component[2] if len(field_component[2]) > 0 else "get"+field.capitalize()
+                            gs_obj[field] = {"getter": getter, "setter": setter}
+                            gs_sd.extend([field, getter, setter])
+                        else:
+                            raise Exception("getter_setter parse %s:%s failed" %(gs_kls, field))
+
 
 
     def should_rename_function(self, class_name, method_name):
@@ -1414,6 +1471,15 @@ class Generator(object):
             # print >> sys.stderr, "will rename %s to %s" % (method_name, self.rename_functions[class_name][method_name])
             return self.rename_classes[class_name]
         return class_name
+
+    def treat_method_as_getter_setter(self, class_name, method_name):
+            ## skip function if configured as getter/setter
+        for key in self.shadowed_methods_by_getter_setter.iterkeys():
+            if re.match("^" + key + "$", class_name) :
+                for func in self.shadowed_methods_by_getter_setter[key]:
+                    if func == method_name:
+                        return True
+        return False
 
     def should_skip(self, class_name, method_name, verbose=False):
         if class_name == "*" and self.skip_classes.has_key("*"):
@@ -1884,6 +1950,7 @@ def main():
                 'cpp_ns': config.get(s, 'cpp_namespace').split(' ') if config.has_option(s, 'cpp_namespace') else None,
                 'classes_have_no_parents': config.get(s, 'classes_have_no_parents'),
                 'base_classes_to_skip': config.get(s, 'base_classes_to_skip'),
+                'getter_setter': config.get(s, 'getter_setter'),
                 'abstract_classes': config.get(s, 'abstract_classes'),
                 'persistent_classes': config.get(s, 'persistent_classes') if config.has_option(s, 'persistent_classes') else None,
                 'classes_owned_by_cpp': config.get(s, 'classes_owned_by_cpp') if config.has_option(s, 'classes_owned_by_cpp') else None,
