@@ -1429,8 +1429,12 @@ class Generator(object):
                 self.replace_headers[header] = replaced_header
         
         if "getter_setter" in opts :
+            #print(" getter_setter : %s" % opts["getter_setter"])
             list_of_getter_setter = re.split(",\n?", opts['getter_setter'])
             for line in list_of_getter_setter:
+                #print(" line %s" % line)
+                if len(line) == 0: 
+                    continue
                 gs_kls, gs_fields_txt = line.split("::")
                 gs_obj = self.getter_setter[gs_kls] = {}
                 gs_sd = self.shadowed_methods_by_getter_setter[gs_kls] = []
@@ -1950,7 +1954,7 @@ def main():
                 'cpp_ns': config.get(s, 'cpp_namespace').split(' ') if config.has_option(s, 'cpp_namespace') else None,
                 'classes_have_no_parents': config.get(s, 'classes_have_no_parents'),
                 'base_classes_to_skip': config.get(s, 'base_classes_to_skip'),
-                'getter_setter': config.get(s, 'getter_setter'),
+                'getter_setter': config.get(s, 'getter_setter')  if config.has_option(s, 'getter_setter') else "",
                 'abstract_classes': config.get(s, 'abstract_classes'),
                 'persistent_classes': config.get(s, 'persistent_classes') if config.has_option(s, 'persistent_classes') else None,
                 'classes_owned_by_cpp': config.get(s, 'classes_owned_by_cpp') if config.has_option(s, 'classes_owned_by_cpp') else None,
