@@ -1046,6 +1046,7 @@ class NativeClass(object):
                     "setter" : self.find_method(field["setter"]),
                 }
                 if item["getter"] is None and item["setter"] is None:
+                   #print("gettter %s, setter %s" % (field["getter"], field["setter"]))
                    raise Exception("getter_setter for %s.%s both None" %(self.class_name, field_name))
                 self.getter_setter.append(item)
 
@@ -1060,7 +1061,8 @@ class NativeClass(object):
 
     def skip_bind_function(self, method_name):
         if self.class_name in self.generator.shadowed_methods_by_getter_setter :
-            return method_name in self.generator.shadowed_methods_by_getter_setter[self.class_name]
+            #print("??? skip %s contains %s" %(self.generator.shadowed_methods_by_getter_setter[self.class_name], method_name))
+            return method_name["name"] in self.generator.shadowed_methods_by_getter_setter[self.class_name]
         return False
 
     def find_method(self, method_name): 
@@ -1442,7 +1444,7 @@ class Generator(object):
                 if match: 
                     list_of_fields = match.group(1).split(" ")
                     for field in list_of_fields:
-                        field_component = field.split(",")
+                        field_component = field.split("/")
                         if len(field_component) == 1:
                             getter = field
                             #getter = "get" + field.capitalize()
