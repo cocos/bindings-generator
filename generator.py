@@ -1165,7 +1165,7 @@ class NativeClass(object):
             for m in self.override_methods_clean():
                 m['impl'].generate_code(self, is_override = True)
         for m in self.public_fields:
-            if self.is_struct or self.generator.should_bind_field(self.class_name, m.name):
+            if self.should_export_field(m.name):
                 m.generate_code(self)
         # generate register section
         register = Template(file=os.path.join(self.generator.target, "templates", "register.c"),
@@ -1184,6 +1184,9 @@ class NativeClass(object):
             self.doc_func_file.write(str(apidoc_fun_foot_script))
             self.doc_func_file.close()
     
+    def should_export_field(self, field_name):
+        return (self.is_struct and not self.generator.should_skip_field(self.class_name, field_name)) or self.generator.should_bind_field(self.class_name, field_name)
+
     def generate_struct_constructor(self):
         stream = file(os.path.join(self.generator.target, "conversions.yaml"), "r")
         config = yaml.load(stream)
@@ -1522,10 +1525,13 @@ class Generator(object):
             print "(%s:%s) will be accepted" % (class_name, method_name)
         return False
 
+    def should_skip_field(self, class_name, field_name):
+        return self.should_skip(class_name, field_name)
+
     def should_bind_field(self, class_name, field_name, verbose=False):
         if class_name == "*" and self.bind_fields.has_key("*"):
             for func in self.bind_fields["*"]:
-                if re.match(func, method_name):
+                if re.match(func, field_name):
                     return True
         else:
             for key in self.bind_fields.iterkeys():
