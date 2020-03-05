@@ -1466,8 +1466,8 @@ class Generator(object):
                     for field in list_of_fields:
                         field_component = field.split("/")
                         if len(field_component) == 1:
-                            getter = field
-                            #getter = "get" + field.capitalize()
+                            #getter = field
+                            getter = "get" + field.capitalize()
                             gs_obj[field] = {"getter": getter , "setter": "set"+field.capitalize()}
                             gs_sd.extend([field, getter, "set"+ field.capitalize()])
                         elif len(field_component) == 2:
