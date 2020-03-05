@@ -72,6 +72,7 @@ static bool ${struct_constructor_name}(se::State& s)
     #end if
     else if(argc == ${len($public_fields)})
     {
+        ${namespaced_class_name}* cobj = JSB_ALLOC(${namespaced_class_name});
         #set arg_idx = 0
         #set conv_text_array = []
         #for field in $public_fields
@@ -97,25 +98,22 @@ static bool ${struct_constructor_name}(se::State& s)
             #else
         ${field_type} arg${arg_idx};
             #end if
-        $conv_text;
+        if (!args[${arg_idx}].isUndefined()) {
+            $conv_text;
+            #if "seval_to_reference" in $conv_text_array[$arg_idx]
+            cobj->${field.name} = *arg${arg_idx};
+            #else
+            cobj->${field.name} = arg${arg_idx};
+            #end if
+        }
         #set $arg_idx = $arg_idx + 1
         #end for 
 
         if(!ok) {
+            JSB_FREE(cobj);
             SE_REPORT_ERROR("Argument convertion error");
             return false;
         }
-
-        ${namespaced_class_name}* cobj = JSB_ALLOC(${namespaced_class_name});
-        #set arg_idx = 0
-        #for field in $public_fields
-        #if "seval_to_reference" in $conv_text_array[$arg_idx]
-        cobj->${field.name} = *arg${arg_idx};
-        #else
-        cobj->${field.name} = arg${arg_idx};
-        #end if
-        #set $arg_idx = $arg_idx + 1
-        #end for 
 
         s.thisObject()->setPrivateData(cobj);
         se::NonRefNativePtrCreatedByCtorMap::emplace(cobj);
