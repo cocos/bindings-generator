@@ -780,6 +780,7 @@ class NativeFunction(object):
         self.is_override = False
         self.ret_type = NativeType.from_type(cursor.result_type, generator)
         self.comment = self.get_comment(cursor.raw_comment)
+        self.current_class = None
 
         # parse the arguments
         # if self.func_name == "spriteWithFile":
@@ -839,6 +840,7 @@ class NativeFunction(object):
 
     def generate_code(self, current_class=None, generator=None, is_override=False, is_ctor=False):
         self.is_ctor = is_ctor
+        self.current_class = current_class
         gen = current_class.generator if current_class else generator
         config = gen.config
         # print("NativeFunction: " + current_class.namespaced_class_name + ':' + self.func_name + ", is_constructor:" + str(self.is_constructor) + ", is_ctor:" + str(self.is_ctor))
@@ -902,6 +904,7 @@ class NativeOverloadedFunction(object):
         self.is_constructor = False
         self.is_overloaded = True
         self.is_ctor = False
+        self.current_class = None
         for m in func_array:
             self.min_args = min(self.min_args, m.min_args)
 
@@ -941,6 +944,7 @@ class NativeOverloadedFunction(object):
 
     def generate_code(self, current_class=None, is_override=False, is_ctor=False):
         self.is_ctor = is_ctor
+        self.current_class = current_class
         gen = current_class.generator
         config = gen.config
         static = self.implementations[0].static
@@ -1027,6 +1031,8 @@ class NativeClass(object):
         self.namespace_name   = ""
         self.is_struct = is_struct
         self.getter_setter = []
+        self.getter_list = []
+        self.setter_list = []
 
         registration_name = generator.get_class_or_rename_class(self.class_name)
         if generator.remove_prefix:
@@ -1048,7 +1054,12 @@ class NativeClass(object):
                 if item["getter"] is None and item["setter"] is None:
                    #print("gettter %s, setter %s" % (field["getter"], field["setter"]))
                    raise Exception("getter_setter for %s.%s both None" %(self.class_name, field_name))
+                if item["getter"] is not None: 
+                    self.getter_list.append(item["getter"].func_name) 
+                if item["setter"] is not None:
+                    self.setter_list.append(item["setter"].func_name)
                 self.getter_setter.append(item)
+
 
     @property
     def is_skip_constructor(self):
@@ -1070,6 +1081,15 @@ class NativeClass(object):
             if self.methods[m].signature_name == method_name :
                 return self.methods[m]
         return None
+
+    def is_getter_method(self, method_name):
+        return method_name in self.getter_list
+
+    def is_setter_method(self, method_name):
+        return method_name in self.setter_list
+
+    def is_getter_or_setter(self, method_name):
+        return self.is_getter_method(method_name) or self.is_setter_method(method_name)
 
     def parse(self):
         '''
@@ -1477,15 +1497,6 @@ class Generator(object):
             # print >> sys.stderr, "will rename %s to %s" % (method_name, self.rename_functions[class_name][method_name])
             return self.rename_classes[class_name]
         return class_name
-
-    def treat_method_as_getter_setter(self, class_name, method_name):
-            ## skip function if configured as getter/setter
-        for key in self.shadowed_methods_by_getter_setter.iterkeys():
-            if re.match("^" + key + "$", class_name) :
-                for func in self.shadowed_methods_by_getter_setter[key]:
-                    if func == method_name:
-                        return True
-        return False
 
     def should_skip(self, class_name, method_name, verbose=False):
         if class_name == "*" and self.skip_classes.has_key("*"):
