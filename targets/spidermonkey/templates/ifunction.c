@@ -83,4 +83,10 @@ static bool ${signature_name}(se::State& s)
 #end if
     return false;
 }
+#if $current_class is not None and $current_class.is_getter_method($func_name)
+SE_BIND_PROP_GET(${signature_name})
+#elif $current_class is not None and $current_class.is_setter_method($func_name)
+SE_BIND_PROP_SET(${signature_name})
+#else
 SE_BIND_FUNC(${signature_name})
+#end if

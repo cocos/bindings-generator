@@ -100,9 +100,16 @@ bool js_register_${generator.prefix}_${current_class.class_name}(se::Object* obj
     cls->defineProperty("${m.name}", _SE(${m.signature_name}_get_${m.name}), _SE(${m.signature_name}_set_${m.name}));
     #end if
 #end for
+#for m in $current_class.getter_setter
+    #set tmp_getter = "nullptr" if m["getter"] is None else "_SE(" + m["getter"].signature_name + ")"
+    #set tmp_setter = "nullptr" if m["setter"] is None else "_SE(" + m["setter"].signature_name + ")"
+    cls->defineProperty("${m.name}", ${tmp_getter}, ${tmp_setter});
+#end for
 #for m in methods
+    #if not $current_class.skip_bind_function(m)
     #set fn = m['impl']
     cls->defineFunction("${m['name']}", _SE(${fn.signature_name}));
+    #end if
 #end for
 #if $generator.in_listed_extend_classed($current_class.class_name) and $has_constructor
     cls->defineFunction("ctor", _SE(js_${generator.prefix}_${current_class.class_name}_ctor));
