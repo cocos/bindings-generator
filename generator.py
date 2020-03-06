@@ -229,6 +229,11 @@ def normalize_type_str(s, depth=1):
         normalized_name = normalize_type_name_by_sections(sections)
     return normalized_name
 
+def capitalize(name):
+    if len(name) == 0 :
+        return name
+    return name[0].upper() + name[1:]
+
 
 class BaseEnumeration(object):
     """
@@ -1414,19 +1419,21 @@ class Generator(object):
                     list_of_fields = match.group(1).split(" ")
                     for field in list_of_fields:
                         field_component = field.split("/")
+                        cap = capitalize(field)
+                        default_getter = "get" + cap
+                        default_setter = "set" + cap
                         if len(field_component) == 1:
                             #getter = field
-                            getter = "get" + field.capitalize()
-                            gs_obj[field] = {"getter": getter , "setter": "set"+field.capitalize()}
-                            gs_sd.extend([field, getter, "set"+ field.capitalize()])
+                            gs_obj[field] = {"getter": default_getter , "setter": default_setter}
+                            gs_sd.extend([field, default_getter, default_setter])
                         elif len(field_component) == 2:
                             field = field_component[0]
-                            gs_obj[field] = {"getter": field_component[1], "setter": "set"+field.capitalize()}
-                            gs_sd.extend([field, field_component[1], "set"+ field.capitalize()])
+                            gs_obj[field] = {"getter": field_component[1], "setter": default_setter}
+                            gs_sd.extend([field, field_component[1], default_setter])
                         elif len(field_component) == 3:
                             field = field_component[0]
-                            getter = field_component[1] if len(field_component[1]) > 0 else "get"+field.capitalize()
-                            setter = field_component[2] if len(field_component[2]) > 0 else "get"+field.capitalize()
+                            getter = field_component[1] if len(field_component[1]) > 0 else default_getter
+                            setter = field_component[2] if len(field_component[2]) > 0 else default_setter
                             gs_obj[field] = {"getter": getter, "setter": setter}
                             gs_sd.extend([field, getter, setter])
                         else:
