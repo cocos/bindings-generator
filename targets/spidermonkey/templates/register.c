@@ -96,7 +96,7 @@ bool js_register_${generator.prefix}_${current_class.class_name}(se::Object* obj
 #end if
 
 #for m in public_fields
-    #if  $current_class.is_struct  or $generator.should_bind_field($current_class.class_name, m.name)
+    #if  $current_class.should_export_field(m.name)
     cls->defineProperty("${m.name}", _SE(${m.signature_name}_get_${m.name}), _SE(${m.signature_name}_set_${m.name}));
     #end if
 #end for
