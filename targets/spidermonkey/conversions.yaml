@@ -126,6 +126,7 @@ conversions:
     double: "ok &= double_to_seval(${in_value}, &${out_value})"
     long: "ok &= long_to_seval(${in_value}, &${out_value})"
     "unsigned long": "ok &= ulong_to_seval(${in_value}, &${out_value})"
+    "uintptr_t": uintptr_t_to_seval(${in_value}, &${out_value})"
     "ssize_t": "ok &= ssize_to_seval(${in_value}, &${out_value})"
     "ssize_t": "ok &= size_to_seval(${in_value}, &${out_value})"
     "Point": "ok &= Vec2_to_seval(${in_value}, &${out_value})"
