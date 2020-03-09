@@ -40,7 +40,7 @@ conversions:
     "unsigned long": "ok &= seval_to_ulong(${in_value}, &${out_value})"
     "ssize_t": "ok &= seval_to_ssize(${in_value}, &${out_value})"
     "size_t": "ok &= seval_to_size(${in_value}, &${out_value})"
-    "intptr_t": "ok &= seval_to_intptr_t(${in_value}, &${out_value})"
+    "uintptr_t": "ok &= seval_to_uintptr_t(${in_value}, &${out_value})"
     # jsval has to be a TypedArray, a UInt32Array with 2 elements
     "long long": "ok &= seval_to_longlong(${in_value}, &${out_value})"
     "string": "ok &= seval_to_std_string(${in_value}, &${out_value})"
