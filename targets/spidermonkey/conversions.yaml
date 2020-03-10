@@ -142,6 +142,7 @@ conversions:
     "FontDefinition": "ok &= FontDefinition_to_seval(${in_value}, &${out_value})"
     # "String*": "${out_value} = std_string_to_seval(${in_value}->getCString())"
     "@Vector<.*>": "ok &= Vector_to_seval(${in_value}, &${out_value})"
+    "@vector<.*GFX.*>": "ok &= Vector_to_seval(${in_value}, &${out_value})"
     "@Map<std::string.*>": "ok &= Map_string_key_to_seval(${in_value}, &${out_value})"
     "@map<std::string.*,\\s*std::string.*>": "ok &= std_map_string_string_to_seval(${in_value}, &${out_value})"
     "Value": "ok &= ccvalue_to_seval(${in_value}, &${out_value})"
