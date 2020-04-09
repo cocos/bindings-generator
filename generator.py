@@ -1562,8 +1562,8 @@ class Generator(object):
         implfilepath = os.path.join(self.outdir, self.out_file + ".cpp")
         headfilepath = os.path.join(self.outdir, self.out_file + ".hpp")
 
-        self.impl_file = open(implfilepath, "w+")
-        self.head_file = open(headfilepath, "w+")
+        self.impl_file = open(implfilepath, "wb+")
+        self.head_file = open(headfilepath, "wb+")
 
         layout_h = Template(file=os.path.join(self.target, "templates", "layout_head.h"),
                             searchList=[self])
