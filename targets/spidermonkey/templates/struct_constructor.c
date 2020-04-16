@@ -12,7 +12,7 @@ bool sevalue_to_native(const se::Value &from, ${namespaced_class_name} * to)
 #for field in $public_fields
     #set field_type = field.ntype.to_string($generator)
     json->getProperty("${field.name}", &field);
-    if(!field.isUndefined()) {
+    if(!field.isNullOrUndefined()) {
         ok &= sevalue_to_native(field, &(to->${field.name}));
     }
 #set $arg_idx = $arg_idx + 1
@@ -68,7 +68,7 @@ static bool ${struct_constructor_name}(se::State& s)
         ${field_type} arg${arg_idx};
             #end if
         json->getProperty("${field.name}", &field);
-        if(!field.isUndefined()) {
+        if(!field.isNullOrUndefined()) {
             $conv_text;
             #if "seval_to_reference" in $conv_text_array[$arg_idx]
             cobj->${field.name} = *arg${arg_idx};
@@ -118,7 +118,7 @@ static bool ${struct_constructor_name}(se::State& s)
             #else
         ${field_type} arg${arg_idx};
             #end if
-        if (!args[${arg_idx}].isUndefined()) {
+        if (!args[${arg_idx}].isNullOrUndefined()) {
             $conv_text;
             #if "seval_to_reference" in $conv_text_array[$arg_idx]
             cobj->${field.name} = *arg${arg_idx};
