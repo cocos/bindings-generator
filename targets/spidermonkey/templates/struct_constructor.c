@@ -1,5 +1,25 @@
 ## ===== struct constructor function implementation template
 
+
+template<>
+bool sevalue_to_native(const se::Value &from, ${namespaced_class_name} * to)
+{
+    assert(from.isObject());
+    se::Object *json = from.toObject();
+    se::Value field;
+    bool ok = true;
+#set arg_idx = 0
+#for field in $public_fields
+    #set field_type = field.ntype.to_string($generator)
+    json->getProperty("${field.name}", &field);
+    if(!field.isUndefined()) {
+        ok &= sevalue_to_native(field, &(to->${field.name}));
+    }
+#set $arg_idx = $arg_idx + 1
+#end for 
+    return ok;
+}
+
 SE_DECLARE_FINALIZE_FUNC(js_${underlined_class_name}_finalize)
 
 static bool ${struct_constructor_name}(se::State& s)
@@ -41,7 +61,7 @@ static bool ${struct_constructor_name}(se::State& s)
             #if "seval_to_reference" in $conv_text
         ${field_type}* arg${arg_idx} = nullptr;
             #elif $field.ntype.is_numeric
-        ${field_type} arg${arg_idx} = 0;
+        ${field_type} arg${arg_idx} = {};
             #elif $field.ntype.is_pointer
         ${field_type} arg${arg_idx} = nullptr;
             #else
@@ -92,7 +112,7 @@ static bool ${struct_constructor_name}(se::State& s)
             #if "seval_to_reference" in $conv_text_array[$arg_idx]
         ${field_type}* arg${arg_idx} = nullptr;
             #elif $field.ntype.is_numeric
-        ${field_type} arg${arg_idx} = 0;
+        ${field_type} arg${arg_idx} = {};
             #elif $field.ntype.is_pointer
         ${field_type} arg${arg_idx} = nullptr;
             #else

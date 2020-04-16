@@ -64,7 +64,7 @@ static bool ${signature_name}_set_${name}(se::State& s)
 #if "seval_to_reference" in $conv_text
     $arg_type* arg0 = nullptr;
 #elif $ntype.is_numeric
-    $arg_type arg0 = 0;
+    $arg_type arg0 = {};
 #elif $ntype.is_pointer
     $arg_type arg0 = nullptr;
 #else
