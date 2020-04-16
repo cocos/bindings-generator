@@ -412,6 +412,7 @@ class NativeType(object):
         self.whole_name = None
         self.is_const = False
         self.is_pointer = False
+        self.is_reference = False
         self.canonical_type = None
         self.kind = None
 
@@ -441,12 +442,15 @@ class NativeType(object):
             nt = NativeType.from_type(ntype.get_pointee(), generator)
             nt.is_const = ntype.get_pointee().is_const_qualified()
             nt.whole_name = nt.namespaced_class_name + "&"
+            nt.is_reference = True
 
             if nt.is_const:
                 nt.whole_name = "const " + nt.whole_name
 
             if None != nt.canonical_type:
                 nt.canonical_type.whole_name += "&"
+        elif ntype.kind == cindex.TypeKind.RVALUEREFERENCE:
+            nt.is_reference = True
         else:
             nt = NativeType(generator)
             decl = ntype.get_declaration()
@@ -597,45 +601,43 @@ class NativeType(object):
         keys = []
         # print("from_native:" + str(convert_opts))
 
-        if self.canonical_type != None:
-            keys.append(self.canonical_type.name)
-        keys.append(self.name)
+        return "ok &= nativevalue_to_se(%s, %s)" % (convert_opts["in_value"], convert_opts["out_value"])
 
-        class_name = self.name.replace('*', '').replace('const ', '')
-        # if class_name in self.generator.classes_owned_by_cpp:
-        #     print("cpp control: from_native: self.name: " + self.name)
-        # else:
-        #     print("js control: from_native: self.name: " + self.name)            
 
-        from_native_dict = generator.config['conversions']['from_native']
+        # if self.canonical_type != None:
+        #     keys.append(self.canonical_type.name)
+        # keys.append(self.name)
 
-        if self.is_object or self.is_struct:
-            if not NativeType.dict_has_key_re(from_native_dict, keys):
-                if class_name in self.generator.classes_owned_by_cpp:
-                    keys.append("rooted_object")
-                else:
-                    keys.append("object")
-        elif self.is_enum:
-            keys.append(self.enum_declare_type)
+        # class_name = self.name.replace('*', '').replace('const ', '')
+        # # if class_name in self.generator.classes_owned_by_cpp:
+        # #     print("cpp control: from_native: self.name: " + self.name)
+        # # else:
+        # #     print("js control: from_native: self.name: " + self.name)            
 
-        if NativeType.dict_has_key_re(from_native_dict, keys):
-            tpl = NativeType.dict_get_value_re(from_native_dict, keys)
-            tpl = Template(tpl, searchList=[convert_opts])
-            return str(tpl).rstrip()
+        # from_native_dict = generator.config['conversions']['from_native']
 
-        return "#pragma warning NO CONVERSION FROM NATIVE FOR " + self.name
+        # if self.is_object or self.is_struct:
+        #     if not NativeType.dict_has_key_re(from_native_dict, keys):
+        #         if class_name in self.generator.classes_owned_by_cpp:
+        #             keys.append("rooted_object")
+        #         else:
+        #             keys.append("object")
+        # elif self.is_enum:
+        #     keys.append(self.enum_declare_type)
+
+        # if NativeType.dict_has_key_re(from_native_dict, keys):
+        #     tpl = NativeType.dict_get_value_re(from_native_dict, keys)
+        #     tpl = Template(tpl, searchList=[convert_opts])
+        #     return str(tpl).rstrip()
+
+        # return "#pragma warning NO CONVERSION FROM NATIVE FOR " + self.name
 
     def to_native(self, convert_opts):
         assert('generator' in convert_opts)
         generator = convert_opts['generator']
         keys = []
 
-        #print("??? --------------------------------------")
-        #print("name: %s, kind: %s" % (self.name, self.kind))
-        if self.is_const_array:
-            return "ok &= sevalue_to_native_array(%s, %s)" % (convert_opts["in_value"], convert_opts["out_value"])
-
-        return "ok &= sevalue_to_native(%s, &%s)" % (convert_opts["in_value"], convert_opts["out_value"])
+        return "ok &= sevalue_to_native(%s, &%s); //is_reference %s" % (convert_opts["in_value"], convert_opts["out_value"], self.is_reference)
 
         # if self.canonical_type != None:
         #     keys.append(self.canonical_type.name)
