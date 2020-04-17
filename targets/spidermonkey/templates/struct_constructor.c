@@ -47,43 +47,7 @@ static bool ${struct_constructor_name}(se::State& s)
         se::Value field;
 
         ${namespaced_class_name}* cobj = JSB_ALLOC(${namespaced_class_name});
-        #set arg_idx = 0
-        #set conv_text_array = []
-        #for field in $public_fields
-        #set field_type = field.ntype.to_string($generator)
-        #set conv_text = $field.ntype.to_native({"generator": $generator, \
-                             "arg" : $field.ntype, \
-                             "arg_type": $field_type, \
-                             "in_value": "field", \
-                             "out_value": "arg" + str(arg_idx), \
-                             "class_name": $class_name, \
-                             "level": 3, \
-                             "is_static": False, \
-                             "is_pointer": $field.ntype.is_pointer, \
-                             "is_persistent": $is_persistent, \
-                             "ntype": str($field_type)})
-        #set conv_text_array += [$conv_text]
-            #if "seval_to_reference" in $conv_text
-        ${field_type}* arg${arg_idx} = nullptr;
-            #elif $field.ntype.is_numeric
-        ${field_type} arg${arg_idx} = {};
-            #elif $field.ntype.is_pointer
-        ${field_type} arg${arg_idx} = nullptr;
-            #else
-        ${field_type} arg${arg_idx};
-            #end if
-        json->getProperty("${field.name}", &field);
-        if(!field.isNullOrUndefined()) {
-            $conv_text;
-            #if "seval_to_reference" in $conv_text_array[$arg_idx]
-            cobj->${field.name} = *arg${arg_idx};
-            #else
-            cobj->${field.name} = arg${arg_idx};
-            #end if
-        }
-        #set $arg_idx = $arg_idx + 1
-        #end for 
-
+        ok &= sevalue_to_native(args[0], cobj);
         if(!ok) {
             JSB_FREE(cobj);
             SE_REPORT_ERROR("argument convertion error");
