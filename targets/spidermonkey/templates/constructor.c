@@ -41,6 +41,7 @@ static bool ${signature_name}(se::State& s) // constructor.c
                          "in_value": "args[" + str(count) + "]",
                          "out_value": "arg" + str(count),
                          "class_name": $class_name,
+                         "context" : "s.thisObject()",
                          "level": 2,
                          "is_static": False,
                          "ntype": str($arg)})};

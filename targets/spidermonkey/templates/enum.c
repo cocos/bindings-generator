@@ -2,11 +2,11 @@
 #set fields = $current_class.fields
 
 template<>
-bool sevalue_to_native(const se::Value &from, ${current_class.namespaced_class_name} *to)
+bool SEVALUE_TO_NATIVE(const se::Value &from, ${current_class.namespaced_class_name} *to, se::Object *ctx)
 {
     typedef typename std::underlying_type_t<${current_class.namespaced_class_name}>  under_type;
     under_type tmp;
-    if(sevalue_to_native(from, &tmp)) { *to = static_cast<${current_class.namespaced_class_name}>(tmp); return true;}
+    if(SEVALUE_TO_NATIVE(from, &tmp, ctx)) { *to = static_cast<${current_class.namespaced_class_name}>(tmp); return true;}
     return false;
 }
 

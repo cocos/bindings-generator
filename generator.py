@@ -600,8 +600,10 @@ class NativeType(object):
         generator = convert_opts['generator']
         keys = []
         # print("from_native:" + str(convert_opts))
-
-        return "ok &= nativevalue_to_se(%s, %s)" % (convert_opts["in_value"], convert_opts["out_value"])
+        context = "nullptr"
+        if "context" in convert_opts:
+            context = convert_opts["context"]
+        return "ok &= NATIVEVALUE_TO_SE(%s, %s, %s /*ctx*/)" % (convert_opts["in_value"], convert_opts["out_value"], context)
 
 
         # if self.canonical_type != None:
@@ -636,8 +638,11 @@ class NativeType(object):
         assert('generator' in convert_opts)
         generator = convert_opts['generator']
         keys = []
+        context = "nullptr"
+        if "context" in convert_opts:
+            context = convert_opts["context"]
 
-        return "ok &= sevalue_to_native(%s, &%s); //is_reference %s" % (convert_opts["in_value"], convert_opts["out_value"], self.is_reference)
+        return "ok &= SEVALUE_TO_NATIVE(%s, &%s, %s); //is_reference %s" % (convert_opts["in_value"], convert_opts["out_value"], context, self.is_reference)
 
         # if self.canonical_type != None:
         #     keys.append(self.canonical_type.name)

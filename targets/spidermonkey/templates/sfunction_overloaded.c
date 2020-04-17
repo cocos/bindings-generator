@@ -32,6 +32,7 @@ static bool ${signature_name}(se::State& s)
                              "out_value": "arg" + str(count),
                              "class_name": $class_name,
                              "level": 3,
+                             "context" : "s.thisObject()",
                              "is_static": True,
                              "is_persistent": $is_persistent,
                              "ntype": str($arg)})};
@@ -51,6 +52,7 @@ static bool ${signature_name}(se::State& s)
             ${func.ret_type.from_native({"generator": $generator,
                                          "in_value": "result",
                                          "out_value": "s.rval()",
+                                         "context" : "s.thisObject()",
                                          "class_name": $func.ret_type.get_class_name($generator),
                                          "ntype": str($func.ret_type),
                                          "level": 3})};
