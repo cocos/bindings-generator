@@ -21,7 +21,7 @@ static bool ${signature_name}(se::State& s)
             #set $arg = $arguments[$count]
             #set $arg_type = $arg.to_string($generator)
             #if $arg.is_reference
-            #set $holder_prefix="HolderType<"+$arg_type+"*, true>"
+            #set $holder_prefix="HolderType<"+$arg_type+", true>"
             #else
             #set $holder_prefix="HolderType<"+$arg_type+", false>"
             #end if
@@ -37,7 +37,7 @@ static bool ${signature_name}(se::State& s)
                              "is_persistent": $is_persistent, \
                              "ntype": str($arg)}) 
             #set arg_conv_array += [$conv_txt]
-        $holder_prefix::type arg${count} = {};
+        $holder_prefix::local_type arg${count} = {};
             #set $count = $count + 1
         #end while
         #set $count = 0

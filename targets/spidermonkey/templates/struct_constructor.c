@@ -6,6 +6,11 @@ bool sevalue_to_native(const se::Value &from, ${namespaced_class_name} * to)
 {
     assert(from.isObject());
     se::Object *json = from.toObject();
+    auto* data = (${namespaced_class_name}*)json->getPrivateData();
+    if (data) {
+        *to = *data;
+        return true;
+    }
     se::Value field;
     bool ok = true;
 #set arg_idx = 0
