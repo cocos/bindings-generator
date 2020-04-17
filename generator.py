@@ -541,7 +541,7 @@ class NativeType(object):
     def from_string(displayname, generator):
         displayname = displayname.replace(" *", "*")
 
-        nt = NativeType(generator, None)
+        nt = NativeType(generator)
         nt.name = displayname.split("::")[-1]
         nt.namespaced_class_name = displayname
         nt.whole_name = nt.namespaced_class_name

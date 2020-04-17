@@ -2,7 +2,7 @@
 
 SE_DECLARE_FINALIZE_FUNC(js_${underlined_class_name}_finalize)
 
-static bool ${signature_name}(se::State& s)
+static bool ${signature_name}(se::State& s) // constructor.c
 {
 #if $is_skip_constructor
     //#3 ${namespaced_class_name}: is_skip_construtor ${is_skip_constructor}

@@ -4,6 +4,7 @@ SE_DECLARE_FINALIZE_FUNC(js_${underlined_class_name}_finalize)
 
 static bool ${signature_name}(se::State& s)
 {
+    //ctor_overloaded.c
     CC_UNUSED bool ok = true;
     const auto& args = s.args();
     size_t argc = args.size();
