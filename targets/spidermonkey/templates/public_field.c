@@ -13,7 +13,8 @@ static bool ${signature_name}_get_${name}(se::State& s)
                          "ntype": $ntype.get_whole_name($generator),
                          "level": 2,
                          "in_value": "cobj->" + $pretty_name,
-                         "out_value": "jsret"
+                         "out_value": "jsret",
+                         "context" :  "s.thisObject()"
                         })};
     #else
     ${ntype.from_native({"generator": $generator,
@@ -22,7 +23,8 @@ static bool ${signature_name}_get_${name}(se::State& s)
                          "level": 2,
                          "scriptname": $generator.scriptname_from_native($ntype.namespaced_class_name, $ntype.namespace_name),
                          "in_value":"cobj->" + $pretty_name,
-                         "out_value": "jsret"
+                         "out_value": "jsret",
+                         "context" :  "s.thisObject()"
                          })};
     #end if
     s.rval() = jsret;
@@ -48,6 +50,7 @@ static bool ${signature_name}_set_${name}(se::State& s)
                         "func_name": $name, \
                         "level": 2, \
                         "arg":$ntype, \
+                        "context" :  "s.thisObject()" \
                     })
 #else
     #set conv_text = $ntype.to_native({"generator": $generator, \
@@ -59,6 +62,7 @@ static bool ${signature_name}_set_${name}(se::State& s)
                         "scriptname": $generator.scriptname_from_native($ntype.namespaced_class_name, $ntype.namespace_name), \
                         "level": 2, \
                         "arg":$ntype, \
+                        "context" :  "s.thisObject()" \
                     })
 #end if    
     $conv_text;
