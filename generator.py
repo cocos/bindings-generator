@@ -603,7 +603,7 @@ class NativeType(object):
         context = "nullptr"
         if "context" in convert_opts:
             context = convert_opts["context"]
-        return "ok &= NATIVEVALUE_TO_SE(%s, %s, %s /*ctx*/)" % (convert_opts["in_value"], convert_opts["out_value"], context)
+        return "ok &= nativevalue_to_se(%s, %s, %s /*ctx*/)" % (convert_opts["in_value"], convert_opts["out_value"], context)
 
 
         # if self.canonical_type != None:
@@ -642,7 +642,7 @@ class NativeType(object):
         if "context" in convert_opts:
             context = convert_opts["context"]
 
-        return "ok &= SEVALUE_TO_NATIVE(%s, &%s, %s); //is_reference %s" % (convert_opts["in_value"], convert_opts["out_value"], context, self.is_reference)
+        return "ok &= sevalue_to_native(%s, &%s, %s); //is_reference %s" % (convert_opts["in_value"], convert_opts["out_value"], context, self.is_reference)
 
         # if self.canonical_type != None:
         #     keys.append(self.canonical_type.name)

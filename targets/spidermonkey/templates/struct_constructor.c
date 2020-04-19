@@ -2,7 +2,7 @@
 
 
 template<>
-bool SEVALUE_TO_NATIVE(const se::Value &from, ${namespaced_class_name} * to, se::Object *ctx)
+bool sevalue_to_native(const se::Value &from, ${namespaced_class_name} * to, se::Object *ctx)
 {
     assert(from.isObject());
     se::Object *json = from.toObject();
@@ -18,7 +18,7 @@ bool SEVALUE_TO_NATIVE(const se::Value &from, ${namespaced_class_name} * to, se:
     #set field_type = field.ntype.to_string($generator)
     json->getProperty("${field.name}", &field);
     if(!field.isNullOrUndefined()) {
-        ok &= SEVALUE_TO_NATIVE(field, &(to->${field.name}), ctx);
+        ok &= sevalue_to_native(field, &(to->${field.name}), ctx);
     }
 #set $arg_idx = $arg_idx + 1
 #end for 
@@ -47,7 +47,7 @@ static bool ${struct_constructor_name}(se::State& s)
         se::Value field;
 
         ${namespaced_class_name}* cobj = JSB_ALLOC(${namespaced_class_name});
-        ok &= SEVALUE_TO_NATIVE(args[0], cobj, s.thisObject());
+        ok &= sevalue_to_native(args[0], cobj, s.thisObject());
         if(!ok) {
             JSB_FREE(cobj);
             SE_REPORT_ERROR("argument convertion error");

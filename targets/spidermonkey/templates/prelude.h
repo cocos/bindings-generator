@@ -8,6 +8,6 @@ bool register_all_${generator.prefix}(se::Object* obj);
 
 #if $current_class.is_struct
 template<>
-bool SEVALUE_TO_NATIVE(const se::Value &, ${current_class.namespaced_class_name} *, se::Object *ctx);
+bool sevalue_to_native(const se::Value &, ${current_class.namespaced_class_name} *, se::Object *ctx);
 #end if
 JSB_REGISTER_OBJECT_TYPE(${current_class.namespaced_class_name});
