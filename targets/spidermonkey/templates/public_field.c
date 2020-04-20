@@ -2,7 +2,7 @@
 
 static bool ${signature_name}_get_${name}(se::State& s)
 {
-    ${namespaced_class_name}* cobj = (${namespaced_class_name}*)s.nativeThisObject();
+    ${namespaced_class_name}* cobj = SE_THIS_OBJECT<${namespaced_class_name}>(s);
     SE_PRECONDITION2(cobj, false, "${signature_name}_get_${name} : Invalid Native Object");
 
     CC_UNUSED bool ok = true;
@@ -35,7 +35,7 @@ SE_BIND_PROP_GET(${signature_name}_get_${name})
 static bool ${signature_name}_set_${name}(se::State& s)
 {
     const auto& args = s.args();
-    ${namespaced_class_name}* cobj = (${namespaced_class_name}*)s.nativeThisObject();
+    ${namespaced_class_name}* cobj = SE_THIS_OBJECT<${namespaced_class_name}>(s);
     SE_PRECONDITION2(cobj, false, "${signature_name}_set_${name} : Invalid Native Object");
 
     CC_UNUSED bool ok = true;

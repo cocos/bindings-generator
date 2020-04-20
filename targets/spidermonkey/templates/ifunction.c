@@ -2,7 +2,7 @@
 
 static bool ${signature_name}(se::State& s)
 {
-    ${namespaced_class_name}* cobj = (${namespaced_class_name}*)s.nativeThisObject();
+    ${namespaced_class_name}* cobj = SE_THIS_OBJECT<${namespaced_class_name}>(s);
     SE_PRECONDITION2(cobj, false, "${signature_name} : Invalid Native Object");
 #if len($arguments) >= $min_args
     const auto& args = s.args();
