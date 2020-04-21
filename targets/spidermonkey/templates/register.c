@@ -128,6 +128,27 @@ bool js_register_${generator.prefix}_${current_class.class_name}(se::Object* obj
 #end if
     cls->install();
     JSBClassType::registerClass<${current_class.namespaced_class_name}>(cls);
+    
+    if constexpr (std::is_standard_layout_v<${current_class.namespaced_class_name}>) {
+        auto array = se::Object::createArrayObject(0);
+        int idx = 0;
+        #for m in public_fields
+        {
+            //${m.name} : ${m.ntype.name}
+            using field_type = decltype(${current_class.namespaced_class_name}::${m.name});
+            auto attr = se::Object::createPlainObject();
+            attr->setProperty("name", se::Value("${m.name}"));
+            attr->setProperty("offset", se::Value(offsetof(${current_class.namespaced_class_name}, ${m.name})));
+            attr->setProperty("size", se::Value(sizeof(field_type)));
+            attr->setProperty("type", se::Value(SE_UNDERLYING_TYPE_NAME<field_type>()));
+            array->setArrayElement(idx++, se::Value(attr));
+            attr->decRef();
+        }
+        #end for
+        cls->getProto()->setProperty("__attrMeta", se::Value(array));
+        //obj->setProperty("__attrMeta_${current_class.target_class_name}", se::Value(array));
+        array->decRef();
+    }
 
     __jsb_${current_class.underlined_class_name}_proto = cls->getProto();
     __jsb_${current_class.underlined_class_name}_class = cls;
