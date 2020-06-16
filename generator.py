@@ -1197,7 +1197,7 @@ class NativeClass(object):
 
     def _is_ref_class(self, depth = 0):
         """
-        Mark the class as 'cocos2d::Ref' or its subclass.
+        Mark the class as 'cc::Ref' or its subclass.
         """
         # print ">" * (depth + 1) + " " + self.class_name
 
@@ -1690,29 +1690,29 @@ class Generator(object):
 
         for (k, v) in script_ns_dict.items():
             if namespace_class_name.find(k) >= 0:
-                if namespace_class_name.find("cocos2d::Vec2") == 0:
+                if namespace_class_name.find("cc::Vec2") == 0:
                     return "vec2_object"
-                if namespace_class_name.find("cocos2d::Vec3") == 0:
+                if namespace_class_name.find("cc::Vec3") == 0:
                     return "vec3_object"
-                if namespace_class_name.find("cocos2d::Vec4") == 0:
+                if namespace_class_name.find("cc::Vec4") == 0:
                     return "vec4_object"
-                if namespace_class_name.find("cocos2d::Mat4") == 0:
+                if namespace_class_name.find("cc::Mat4") == 0:
                     return "mat4_object"
-                if namespace_class_name.find("cocos2d::Vector") == 0:
+                if namespace_class_name.find("cc::Vector") == 0:
                     return "Array"
-                if namespace_class_name.find("cocos2d::Map") == 0:
+                if namespace_class_name.find("cc::Map") == 0:
                     return "map_object"
-                if namespace_class_name.find("cocos2d::Point")  == 0:
+                if namespace_class_name.find("cc::Point")  == 0:
                     return "point_object"
-                if namespace_class_name.find("cocos2d::Size")  == 0:
+                if namespace_class_name.find("cc::Size")  == 0:
                     return "size_object"
-                if namespace_class_name.find("cocos2d::Rect")  == 0:
+                if namespace_class_name.find("cc::Rect")  == 0:
                     return "rect_object"
-                if namespace_class_name.find("cocos2d::Color3B") == 0:
+                if namespace_class_name.find("cc::Color3B") == 0:
                     return "color3b_object"
-                if namespace_class_name.find("cocos2d::Color4B") == 0:
+                if namespace_class_name.find("cc::Color4B") == 0:
                     return "color4b_object"
-                if namespace_class_name.find("cocos2d::Color4F") == 0:
+                if namespace_class_name.find("cc::Color4F") == 0:
                     return "color4f_object"
                 else:
                     return namespace_class_name.replace("*","").replace("const ", "").replace(k,v)
@@ -1720,9 +1720,9 @@ class Generator(object):
 
     def js_ret_name_from_native(self, namespace_class_name, is_enum) :
         if self.is_cocos_class(namespace_class_name):
-            if namespace_class_name.find("cocos2d::Vector") >=0:
+            if namespace_class_name.find("cc::Vector") >=0:
                 return "new Array()"
-            if namespace_class_name.find("cocos2d::Map") >=0:
+            if namespace_class_name.find("cc::Map") >=0:
                 return "map_object"
             if is_enum:
                 return 0
