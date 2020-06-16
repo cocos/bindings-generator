@@ -20,9 +20,7 @@ conversions:
     "cc::ui::": "ccui."
     "cc::": "cc."
     "spine::": "sp."
-    "cocostudio::": "ccs."
-    "cocosbuilder::": "cc."
-    "CocosDenshion::": "cc."
+    "cc::gfx::": "gfx."
   to_native:
     # jsval to int
     int32_t: "ok &= seval_to_int32(${in_value}, (int32_t*)&${out_value})"
