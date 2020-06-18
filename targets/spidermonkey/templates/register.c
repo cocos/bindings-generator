@@ -28,7 +28,7 @@ extern se::Object* __jsb_${current_class.parents[0].underlined_class_name}_proto
 static bool js_${current_class.underlined_class_name}_finalize(se::State& s)
 {
     #if $current_class.rename_destructor is None
-    CCLOGINFO("jsbindings: finalizing JS object %p (${current_class.namespaced_class_name})", s.nativeThisObject());
+    CC_LOG_INFO("jsbindings: finalizing JS object %p (${current_class.namespaced_class_name})", s.nativeThisObject());
     #if $current_class.is_ref_class
     ${current_class.namespaced_class_name}* cobj = (${current_class.namespaced_class_name}*)s.nativeThisObject();
     cobj->release();
@@ -54,7 +54,7 @@ SE_BIND_FINALIZE_FUNC(js_${current_class.underlined_class_name}_finalize)
 
 static bool js_${current_class.underlined_class_name}_${current_class.rename_destructor}(se::State& s)
 {
-    CCLOGINFO("jsbindings: destory JS object %p (${current_class.namespaced_class_name})", s.nativeThisObject());
+    CC_LOG_INFO("jsbindings: destory JS object %p (${current_class.namespaced_class_name})", s.nativeThisObject());
     #if $current_class.is_ref_class
     ${current_class.namespaced_class_name}* cobj = (${current_class.namespaced_class_name}*)s.nativeThisObject();
     cobj->release();
