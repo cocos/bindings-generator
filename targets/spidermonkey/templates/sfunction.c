@@ -32,6 +32,7 @@ static bool ${signature_name}(se::State& s)
             #set $arg = $arguments[$count]
             #set $arg_type = $arg.to_string($generator)
         ${arg.to_native({"generator": $generator,
+            "arg" : $arg,
             "arg_type": $arg_type,
             "in_value": "args[" + str(count) + "]",
             "out_value": "arg" + str(count),

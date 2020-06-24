@@ -7,6 +7,9 @@
 #set has_constructor = True
 #set constructor = $current_class.methods.constructor
 ${current_class.methods.constructor.generate_code($current_class)}
+#elif $current_class.is_struct
+#set has_constructor = True
+${current_class.generate_struct_constructor()}
 #end if
 
 #if $generator.in_listed_extend_classed($current_class.class_name) and $has_constructor
@@ -25,7 +28,6 @@ extern se::Object* __jsb_${current_class.parents[0].underlined_class_name}_proto
 static bool js_${current_class.underlined_class_name}_finalize(se::State& s)
 {
     #if $current_class.rename_destructor is None
-    CCLOGINFO("jsbindings: finalizing JS object %p (${current_class.namespaced_class_name})", s.nativeThisObject());
     #if $current_class.is_ref_class
     ${current_class.namespaced_class_name}* cobj = (${current_class.namespaced_class_name}*)s.nativeThisObject();
     cobj->release();
@@ -36,7 +38,7 @@ static bool js_${current_class.underlined_class_name}_finalize(se::State& s)
     {
         se::NonRefNativePtrCreatedByCtorMap::erase(iter);
         ${current_class.namespaced_class_name}* cobj = (${current_class.namespaced_class_name}*)s.nativeThisObject();
-        delete cobj;
+        JSB_FREE(cobj);
     }
         #end if
     #end if
@@ -51,7 +53,6 @@ SE_BIND_FINALIZE_FUNC(js_${current_class.underlined_class_name}_finalize)
 
 static bool js_${current_class.underlined_class_name}_${current_class.rename_destructor}(se::State& s)
 {
-    CCLOGINFO("jsbindings: destory JS object %p (${current_class.namespaced_class_name})", s.nativeThisObject());
     #if $current_class.is_ref_class
     ${current_class.namespaced_class_name}* cobj = (${current_class.namespaced_class_name}*)s.nativeThisObject();
     cobj->release();
@@ -62,7 +63,7 @@ static bool js_${current_class.underlined_class_name}_${current_class.rename_des
     {
         se::NonRefNativePtrCreatedByCtorMap::erase(iter);
         ${current_class.namespaced_class_name}* cobj = (${current_class.namespaced_class_name}*)s.nativeThisObject();
-        delete cobj;
+        JSB_FREE(cobj);
     }
         #end if
     #end if
@@ -93,13 +94,20 @@ bool js_register_${generator.prefix}_${current_class.class_name}(se::Object* obj
 #end if
 
 #for m in public_fields
-    #if $generator.should_bind_field($current_class.class_name, m.name)
+    #if  $current_class.should_export_field(m.name)
     cls->defineProperty("${m.name}", _SE(${m.signature_name}_get_${m.name}), _SE(${m.signature_name}_set_${m.name}));
     #end if
 #end for
+#for m in $current_class.getter_setter
+    #set tmp_getter = "nullptr" if m["getter"] is None else "_SE(" + m["getter"].signature_name + ")"
+    #set tmp_setter = "nullptr" if m["setter"] is None else "_SE(" + m["setter"].signature_name + ")"
+    cls->defineProperty("${m.name}", ${tmp_getter}, ${tmp_setter});
+#end for
 #for m in methods
+    #if not $current_class.skip_bind_function(m)
     #set fn = m['impl']
     cls->defineFunction("${m['name']}", _SE(${fn.signature_name}));
+    #end if
 #end for
 #if $generator.in_listed_extend_classed($current_class.class_name) and $has_constructor
     cls->defineFunction("ctor", _SE(js_${generator.prefix}_${current_class.class_name}_ctor));

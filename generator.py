@@ -229,6 +229,11 @@ def normalize_type_str(s, depth=1):
         normalized_name = normalize_type_name_by_sections(sections)
     return normalized_name
 
+def capitalize(name):
+    if len(name) == 0 :
+        return name
+    return name[0].upper() + name[1:]
+
 
 class BaseEnumeration(object):
     """
@@ -385,6 +390,7 @@ class NativeType(object):
     def __init__(self, generator):
         self.generator = generator
         self.is_object = False
+        self.is_struct = False
         self.is_function = False
         self.is_enum = False
         self.enum_kind = cindex.TypeKind.INVALID
@@ -434,7 +440,7 @@ class NativeType(object):
             decl = ntype.get_declaration()
 
             nt.namespaced_class_name = get_namespaced_class_name(decl).replace('::__ndk1', '')
-
+            nt.is_struct = decl.kind == cindex.CursorKind.STRUCT_DECL
             if decl.kind == cindex.CursorKind.CLASS_DECL \
                 and not nt.namespaced_class_name.startswith('std::function') \
                 and not nt.namespaced_class_name.startswith('std::string') \
@@ -590,7 +596,7 @@ class NativeType(object):
 
         from_native_dict = generator.config['conversions']['from_native']
 
-        if self.is_object:
+        if self.is_object or self.is_struct:
             if not NativeType.dict_has_key_re(from_native_dict, keys):
                 if class_name in self.generator.classes_owned_by_cpp:
                     keys.append("rooted_object")
@@ -616,7 +622,8 @@ class NativeType(object):
         keys.append(self.name)
 
         to_native_dict = generator.config['conversions']['to_native']
-        if self.is_object:
+        is_struct_pointer = "arg" in convert_opts and convert_opts["arg"].is_pointer and self.is_pointer and self.is_struct
+        if self.is_object or is_struct_pointer:
             if not NativeType.dict_has_key_re(to_native_dict, keys):
                 keys.append("object")
         elif self.is_enum:
@@ -628,11 +635,13 @@ class NativeType(object):
             indent = convert_opts['level'] * four_space
             return str(tpl).replace("\n", "\n" + indent)
 
-
         if NativeType.dict_has_key_re(to_native_dict, keys):
             tpl = NativeType.dict_get_value_re(to_native_dict, keys)
             tpl = Template(tpl, searchList=[convert_opts])
             return str(tpl).rstrip()
+
+        if "arg" in convert_opts and not convert_opts["arg"].is_pointer:
+            return "ok &= seval_to_reference(%s, &%s)" % (convert_opts["in_value"], convert_opts["out_value"])
         return "#pragma warning NO CONVERSION TO NATIVE FOR " + self.name + "\n" + convert_opts['level'] * four_space +  "ok = false"
 
     def to_string(self, generator):
@@ -776,6 +785,7 @@ class NativeFunction(object):
         self.is_override = False
         self.ret_type = NativeType.from_type(cursor.result_type, generator)
         self.comment = self.get_comment(cursor.raw_comment)
+        self.current_class = None
 
         # parse the arguments
         # if self.func_name == "spriteWithFile":
@@ -835,6 +845,7 @@ class NativeFunction(object):
 
     def generate_code(self, current_class=None, generator=None, is_override=False, is_ctor=False):
         self.is_ctor = is_ctor
+        self.current_class = current_class
         gen = current_class.generator if current_class else generator
         config = gen.config
         # print("NativeFunction: " + current_class.namespaced_class_name + ':' + self.func_name + ", is_constructor:" + str(self.is_constructor) + ", is_ctor:" + str(self.is_ctor))
@@ -877,16 +888,6 @@ class NativeFunction(object):
                                 searchList=[current_class, self])
         if not is_override:
             gen.impl_file.write(str(tpl))
-        if not is_ctor:
-            apidoc_function_script = Template(file=os.path.join(gen.target,
-                                                            "templates",
-                                                            "apidoc_function.script"),
-                                          searchList=[current_class, self])
-            if gen.script_type == "spidermonkey":
-                gen.doc_file.write(str(apidoc_function_script))
-            else:
-                if gen.script_type == "lua" and current_class != None :
-                    current_class.doc_func_file.write(str(apidoc_function_script))
 
 
 class NativeOverloadedFunction(object):
@@ -898,6 +899,7 @@ class NativeOverloadedFunction(object):
         self.is_constructor = False
         self.is_overloaded = True
         self.is_ctor = False
+        self.current_class = None
         for m in func_array:
             self.min_args = min(self.min_args, m.min_args)
 
@@ -937,10 +939,12 @@ class NativeOverloadedFunction(object):
 
     def generate_code(self, current_class=None, is_override=False, is_ctor=False):
         self.is_ctor = is_ctor
+        self.current_class = current_class
         gen = current_class.generator
         config = gen.config
         static = self.implementations[0].static
         # print("NativeOverloadedFunction: " + current_class.namespaced_class_name + ':' + self.func_name + ", is_constructor:" + str(self.is_constructor) + ", is_ctor:" + str(self.is_ctor))
+    
         if not is_ctor:
             tpl = Template(file=os.path.join(gen.target, "templates", "function.h"),
                         searchList=[current_class, self])
@@ -981,30 +985,14 @@ class NativeOverloadedFunction(object):
         if not is_override:
             gen.impl_file.write(str(tpl))
 
-        if current_class != None and not is_ctor:
-            if gen.script_type == "lua":
-                apidoc_function_overload_script = Template(file=os.path.join(gen.target,
-                                                        "templates",
-                                                        "apidoc_function_overload.script"),
-                                      searchList=[current_class, self])
-                current_class.doc_func_file.write(str(apidoc_function_overload_script))
-            else:
-                if gen.script_type == "spidermonkey":
-                    apidoc_function_overload_script = Template(file=os.path.join(gen.target,
-                                                        "templates",
-                                                        "apidoc_function_overload.script"),
-                                      searchList=[current_class, self])
-                    gen.doc_file.write(str(apidoc_function_overload_script))
-
 
 class NativeClass(object):
-    def __init__(self, cursor, generator):
+    def __init__(self, cursor, generator, is_struct = False):
         # the cursor to the implementation
         self.cursor = cursor
         self.class_name = cursor.displayname
         self.is_ref_class = self.class_name == "Ref"
         self.rename_destructor = generator.rename_destructor(self.class_name)
-        self.namespaced_class_name = self.class_name
         self.parents = []
         self.fields = []
         self.public_fields = []
@@ -1021,6 +1009,10 @@ class NativeClass(object):
         self.override_methods = {}
         self.has_constructor  = False
         self.namespace_name   = ""
+        self.is_struct = is_struct
+        self.getter_setter = []
+        self.getter_list = []
+        self.setter_list = []
 
         registration_name = generator.get_class_or_rename_class(self.class_name)
         if generator.remove_prefix:
@@ -1030,10 +1022,54 @@ class NativeClass(object):
         self.namespaced_class_name = get_namespaced_class_name(cursor)
         self.namespace_name        = get_namespace_name(cursor)
         self.parse()
+        # post parse
+        if self.class_name in generator.getter_setter :
+            for field_name in generator.getter_setter[self.class_name].iterkeys():
+                field = generator.getter_setter[self.class_name][field_name]
+                item = {
+                    "name" : field_name,
+                    "getter" : self.find_method(field["getter"]),
+                    "setter" : self.find_method(field["setter"]),
+                }
+                if item["getter"] is None and item["setter"] is None:
+                   #print("gettter %s, setter %s" % (field["getter"], field["setter"]))
+                   raise Exception("getter_setter for %s.%s both None" %(self.class_name, field_name))
+                if item["getter"] is not None: 
+                    self.getter_list.append(item["getter"].func_name) 
+                if item["setter"] is not None:
+                    self.setter_list.append(item["setter"].func_name)
+                self.getter_setter.append(item)
+
+
+    @property
+    def is_skip_constructor(self):
+        return self.generator.skip_constructor(self.class_name)
 
     @property
     def underlined_class_name(self):
         return self.namespaced_class_name.replace("::", "_")
+
+
+    def skip_bind_function(self, method_name):
+        if self.class_name in self.generator.shadowed_methods_by_getter_setter :
+            #print("??? skip %s contains %s" %(self.generator.shadowed_methods_by_getter_setter[self.class_name], method_name))
+            return method_name["name"] in self.generator.shadowed_methods_by_getter_setter[self.class_name]
+        return False
+
+    def find_method(self, method_name): 
+        for m in self.methods :
+            if self.methods[m].signature_name == method_name :
+                return self.methods[m]
+        return None
+
+    def is_getter_method(self, method_name):
+        return method_name in self.getter_list
+
+    def is_setter_method(self, method_name):
+        return method_name in self.setter_list
+
+    def is_getter_or_setter(self, method_name):
+        return self.is_getter_method(method_name) or self.is_setter_method(method_name)
 
     def parse(self):
         '''
@@ -1093,48 +1129,35 @@ class NativeClass(object):
                             searchList=[{"current_class": self}])
         prelude_c = Template(file=os.path.join(self.generator.target, "templates", "prelude.c"),
                             searchList=[{"current_class": self}])
-        apidoc_classhead_script = Template(file=os.path.join(self.generator.target,
-                                                         "templates",
-                                                         "apidoc_classhead.script"),
-                                       searchList=[{"current_class": self}])
-        if self.generator.script_type == "lua":
-            docfuncfilepath = os.path.join(self.generator.outdir + "/api", self.class_name + ".lua")
-            self.doc_func_file = open(docfuncfilepath, "w+")
-            apidoc_fun_head_script  = Template(file=os.path.join(self.generator.target,
-                                                         "templates",
-                                                         "apidoc_function_head.script"),
-                                       searchList=[{"current_class": self}])
-            self.doc_func_file.write(str(apidoc_fun_head_script))
+
 
         self.generator.head_file.write(str(prelude_h))
         self.generator.impl_file.write(str(prelude_c))
-        self.generator.doc_file.write(str(apidoc_classhead_script))
         for m in self.methods_clean():
             m['impl'].generate_code(self)
         for m in self.static_methods_clean():
             m['impl'].generate_code(self)
-        if self.generator.script_type == "lua":
-            for m in self.override_methods_clean():
-                m['impl'].generate_code(self, is_override = True)
         for m in self.public_fields:
-            if self.generator.should_bind_field(self.class_name, m.name):
+            if self.should_export_field(m.name):
                 m.generate_code(self)
         # generate register section
         register = Template(file=os.path.join(self.generator.target, "templates", "register.c"),
                             searchList=[{"current_class": self}])
-        apidoc_classfoot_script = Template(file=os.path.join(self.generator.target,
-                                                         "templates",
-                                                         "apidoc_classfoot.script"),
-                                       searchList=[{"current_class": self}])
         self.generator.impl_file.write(str(register))
-        self.generator.doc_file.write(str(apidoc_classfoot_script))
-        if self.generator.script_type == "lua":
-            apidoc_fun_foot_script  = Template(file=os.path.join(self.generator.target,
-                                                         "templates",
-                                                         "apidoc_function_foot.script"),
-                                       searchList=[{"current_class": self}])
-            self.doc_func_file.write(str(apidoc_fun_foot_script))
-            self.doc_func_file.close()
+
+    def should_export_field(self, field_name):
+        return (self.is_struct and not self.generator.should_skip_field(self.class_name, field_name)) or self.generator.should_bind_field(self.class_name, field_name)
+
+    def generate_struct_constructor(self):
+        stream = file(os.path.join(self.generator.target, "conversions.yaml"), "r")
+        config = yaml.load(stream)
+        tpl = Template(config['definitions']['constructor'],
+                                    searchList=[self])
+        self.struct_constructor_name = str(tpl)
+        tpl = Template(file=os.path.join(self.generator.target, "templates", "struct_constructor.c"),
+                            searchList=[self])
+        self.generator.impl_file.write(str(tpl))
+
     def _deep_iterate(self, cursor=None, depth=0):
         for node in cursor.get_children():
             # print("%s%s - %s" % ("> " * depth, node.displayname, node.kind))
@@ -1174,7 +1197,7 @@ class NativeClass(object):
 
     def _is_ref_class(self, depth = 0):
         """
-        Mark the class as 'cocos2d::Ref' or its subclass.
+        Mark the class as 'cc::Ref' or its subclass.
         """
         # print ">" * (depth + 1) + " " + self.class_name
 
@@ -1214,7 +1237,7 @@ class NativeClass(object):
 
         elif cursor.kind == cindex.CursorKind.FIELD_DECL:
             self.fields.append(NativeField(cursor, self.generator))
-            if self._current_visibility == cindex.AccessSpecifier.PUBLIC and NativeField.can_parse(cursor.type, self.generator):
+            if (self.is_struct or self._current_visibility == cindex.AccessSpecifier.PUBLIC) and NativeField.can_parse(cursor.type, self.generator):
                 self.public_fields.append(NativeField(cursor, self.generator))
         elif cursor.kind == cindex.CursorKind.CXX_ACCESS_SPEC_DECL:
             self._current_visibility = cursor.access_specifier
@@ -1228,16 +1251,6 @@ class NativeClass(object):
                     return False
                 if m.is_override:
                     if NativeClass._is_method_in_parents(self, registration_name):
-                        if self.generator.script_type == "lua":
-                            if not self.override_methods.has_key(registration_name):
-                                self.override_methods[registration_name] = m
-                            else:
-                                previous_m = self.override_methods[registration_name]
-                                if isinstance(previous_m, NativeOverloadedFunction):
-                                    previous_m.append(m)
-                                else:
-                                    self.override_methods[registration_name] = NativeOverloadedFunction([m, previous_m])
-
                         self._add_temp_override_method(m)
                         self._handle_override_method_with_same_name_as_instance_method()
                         return False
@@ -1322,6 +1335,8 @@ class Generator(object):
         self.hpp_headers = opts['hpp_headers']
         self.cpp_headers = opts['cpp_headers']
         self.win32_clang_flags = opts['win32_clang_flags']
+        self.getter_setter = {}
+        self.shadowed_methods_by_getter_setter = {}
 
         extend_clang_args = []
 
@@ -1388,6 +1403,42 @@ class Generator(object):
             for replace in list_of_replace_headers:
                 header, replaced_header = replace.split("::")
                 self.replace_headers[header] = replaced_header
+        
+        if "getter_setter" in opts :
+            #print(" getter_setter : %s" % opts["getter_setter"])
+            list_of_getter_setter = re.split(",\n?", opts['getter_setter'])
+            for line in list_of_getter_setter:
+                #print(" line %s" % line)
+                if len(line) == 0: 
+                    continue
+                gs_kls, gs_fields_txt = line.split("::")
+                gs_obj = self.getter_setter[gs_kls] = {}
+                gs_sd = self.shadowed_methods_by_getter_setter[gs_kls] = []
+                match = re.match("\[([^]]+)\]",gs_fields_txt)
+                if match: 
+                    list_of_fields = match.group(1).split(" ")
+                    for field in list_of_fields:
+                        field_component = field.split("/")
+                        cap = capitalize(field)
+                        default_getter = "get" + cap
+                        default_setter = "set" + cap
+                        if len(field_component) == 1:
+                            #getter = field
+                            gs_obj[field] = {"getter": default_getter , "setter": default_setter}
+                            gs_sd.extend([field, default_getter, default_setter])
+                        elif len(field_component) == 2:
+                            field = field_component[0]
+                            gs_obj[field] = {"getter": field_component[1], "setter": default_setter}
+                            gs_sd.extend([field, field_component[1], default_setter])
+                        elif len(field_component) == 3:
+                            field = field_component[0]
+                            getter = field_component[1] if len(field_component[1]) > 0 else default_getter
+                            setter = field_component[2] if len(field_component[2]) > 0 else default_setter
+                            gs_obj[field] = {"getter": getter, "setter": setter}
+                            gs_sd.extend([field, getter, setter])
+                        else:
+                            raise Exception("getter_setter parse %s:%s failed" %(gs_kls, field))
+
 
 
     def should_rename_function(self, class_name, method_name):
@@ -1427,10 +1478,13 @@ class Generator(object):
             print "(%s:%s) will be accepted" % (class_name, method_name)
         return False
 
+    def should_skip_field(self, class_name, field_name):
+        return self.should_skip(class_name, field_name)
+
     def should_bind_field(self, class_name, field_name, verbose=False):
         if class_name == "*" and self.bind_fields.has_key("*"):
             for func in self.bind_fields["*"]:
-                if re.match(func, method_name):
+                if re.match(func, field_name):
                     return True
         else:
             for key in self.bind_fields.iterkeys():
@@ -1451,6 +1505,9 @@ class Generator(object):
 
     def rename_destructor(self, class_name):
         return self.should_rename_function(class_name, "~" + class_name)
+
+    def skip_constructor(self, class_name):
+        return self.should_skip(class_name, class_name)
 
     def in_listed_classes(self, class_name):
         """
@@ -1505,28 +1562,15 @@ class Generator(object):
         implfilepath = os.path.join(self.outdir, self.out_file + ".cpp")
         headfilepath = os.path.join(self.outdir, self.out_file + ".hpp")
 
-        docfiledir   = self.outdir + "/api"
-        if not os.path.exists(docfiledir):
-            os.makedirs(docfiledir)
-
-        if self.script_type == "lua":
-            docfilepath = os.path.join(docfiledir, self.out_file + "_api.lua")
-        else:
-            docfilepath = os.path.join(docfiledir, self.out_file + "_api.js")
-
-        self.impl_file = open(implfilepath, "w+")
-        self.head_file = open(headfilepath, "w+")
-        self.doc_file = open(docfilepath, "w+")
+        self.impl_file = open(implfilepath, "wb+")
+        self.head_file = open(headfilepath, "wb+")
 
         layout_h = Template(file=os.path.join(self.target, "templates", "layout_head.h"),
                             searchList=[self])
         layout_c = Template(file=os.path.join(self.target, "templates", "layout_head.c"),
                             searchList=[self])
-        apidoc_ns_script = Template(file=os.path.join(self.target, "templates", "apidoc_ns.script"),
-                                searchList=[self])
         self.head_file.write(str(layout_h))
         self.impl_file.write(str(layout_c))
-        self.doc_file.write(str(apidoc_ns_script))
 
         self._parse_headers()
 
@@ -1536,15 +1580,9 @@ class Generator(object):
                             searchList=[self])
         self.head_file.write(str(layout_h))
         self.impl_file.write(str(layout_c))
-        if self.script_type == "lua":
-            apidoc_ns_foot_script = Template(file=os.path.join(self.target, "templates", "apidoc_ns_foot.script"),
-                                searchList=[self])
-            self.doc_file.write(str(apidoc_ns_foot_script))
 
         self.impl_file.close()
         self.head_file.close()
-        self.doc_file.close()
-
 
     def _pretty_print(self, diagnostics):
         errors=[]
@@ -1584,12 +1622,15 @@ class Generator(object):
             return children
 
         # get the canonical type
-        if cursor.kind == cindex.CursorKind.CLASS_DECL:
-            if cursor == cursor.type.get_declaration() and len(get_children_array_from_iter(cursor.get_children())) > 0:
+        if cursor.kind == cindex.CursorKind.CLASS_DECL or cursor.kind == cindex.CursorKind.STRUCT_DECL:
+            is_struct = cursor.kind == cindex.CursorKind.STRUCT_DECL
+            namespaced_class_name = get_namespaced_class_name(cursor)
+            if len(namespaced_class_name) == 0 or cursor.displayname.startswith("__"):
+                return
+            if  cursor == cursor.type.get_declaration() and len(get_children_array_from_iter(cursor.get_children())) > 0:
                 is_targeted_class = True
                 if self.cpp_ns:
                     is_targeted_class = False
-                    namespaced_class_name = get_namespaced_class_name(cursor)
                     for ns in self.cpp_ns:
                         if namespaced_class_name.startswith(ns):
                             is_targeted_class = True
@@ -1597,7 +1638,7 @@ class Generator(object):
 
                 if is_targeted_class and self.in_listed_classes(cursor.displayname):
                     if not self.generated_classes.has_key(cursor.displayname):
-                        nclass = NativeClass(cursor, self)
+                        nclass = NativeClass(cursor, self, is_struct)
                         nclass.generate_code()
                         self.generated_classes[cursor.displayname] = nclass
                     return
@@ -1649,103 +1690,39 @@ class Generator(object):
 
         for (k, v) in script_ns_dict.items():
             if namespace_class_name.find(k) >= 0:
-                if namespace_class_name.find("cocos2d::Vec2") == 0:
+                if namespace_class_name.find("cc::Vec2") == 0:
                     return "vec2_object"
-                if namespace_class_name.find("cocos2d::Vec3") == 0:
+                if namespace_class_name.find("cc::Vec3") == 0:
                     return "vec3_object"
-                if namespace_class_name.find("cocos2d::Vec4") == 0:
+                if namespace_class_name.find("cc::Vec4") == 0:
                     return "vec4_object"
-                if namespace_class_name.find("cocos2d::Mat4") == 0:
+                if namespace_class_name.find("cc::Mat4") == 0:
                     return "mat4_object"
-                if namespace_class_name.find("cocos2d::Vector") == 0:
+                if namespace_class_name.find("cc::Vector") == 0:
                     return "Array"
-                if namespace_class_name.find("cocos2d::Map") == 0:
+                if namespace_class_name.find("cc::Map") == 0:
                     return "map_object"
-                if namespace_class_name.find("cocos2d::Point")  == 0:
+                if namespace_class_name.find("cc::Point")  == 0:
                     return "point_object"
-                if namespace_class_name.find("cocos2d::Size")  == 0:
+                if namespace_class_name.find("cc::Size")  == 0:
                     return "size_object"
-                if namespace_class_name.find("cocos2d::Rect")  == 0:
+                if namespace_class_name.find("cc::Rect")  == 0:
                     return "rect_object"
-                if namespace_class_name.find("cocos2d::Color3B") == 0:
+                if namespace_class_name.find("cc::Color3B") == 0:
                     return "color3b_object"
-                if namespace_class_name.find("cocos2d::Color4B") == 0:
+                if namespace_class_name.find("cc::Color4B") == 0:
                     return "color4b_object"
-                if namespace_class_name.find("cocos2d::Color4F") == 0:
+                if namespace_class_name.find("cc::Color4F") == 0:
                     return "color4f_object"
                 else:
                     return namespace_class_name.replace("*","").replace("const ", "").replace(k,v)
         return namespace_class_name.replace("*","").replace("const ", "")
 
-    def lua_typename_from_natve(self, namespace_class_name, is_ret = False):
-        script_ns_dict = self.config['conversions']['ns_map']
-        if namespace_class_name.find("std::") == 0:
-            if namespace_class_name.find("std::string") == 0:
-                return "string"
-            if namespace_class_name.find("std::vector") == 0:
-                return "array_table"
-            if namespace_class_name.find("std::map") == 0 or namespace_class_name.find("std::unordered_map") == 0:
-                return "map_table"
-            if namespace_class_name.find("std::function") == 0:
-                return "function"
-
-        for (k, v) in script_ns_dict.items():
-            if namespace_class_name.find(k) >= 0:
-                if namespace_class_name.find("cocos2d::Vec2") == 0:
-                    return "vec2_table"
-                if namespace_class_name.find("cocos2d::Vec3") == 0:
-                    return "vec3_table"
-                if namespace_class_name.find("cocos2d::Vec4") == 0:
-                    return "vec4_table"
-                if namespace_class_name.find("cocos2d::Vector") == 0:
-                    return "array_table"
-                if namespace_class_name.find("cocos2d::Mat4") == 0:
-                    return "mat4_table"
-                if namespace_class_name.find("cocos2d::Map") == 0:
-                    return "map_table"
-                if namespace_class_name.find("cocos2d::Point")  == 0:
-                    return "point_table"
-                if namespace_class_name.find("cocos2d::Size")  == 0:
-                    return "size_table"
-                if namespace_class_name.find("cocos2d::Rect")  == 0:
-                    return "rect_table"
-                if namespace_class_name.find("cocos2d::Color3B") == 0:
-                    return "color3b_table"
-                if namespace_class_name.find("cocos2d::Color4B") == 0:
-                    return "color4b_table"
-                if namespace_class_name.find("cocos2d::Color4F") == 0:
-                    return "color4f_table"
-                if is_ret == 1:
-                    return namespace_class_name.replace("*","").replace("const ", "").replace(k,"")
-                else:
-                    return namespace_class_name.replace("*","").replace("const ", "").replace(k,v)
-        return namespace_class_name.replace("*","").replace("const ","")
-
-
-    def api_param_name_from_native(self,native_name):
-        lower_name = native_name.lower()
-        if lower_name == "std::string" or lower_name == 'string' or lower_name == 'basic_string' or lower_name == 'std::basic_string':
-            return "str"
-
-        if lower_name.find("unsigned ") >= 0 :
-            return native_name.replace("unsigned ","")
-
-        if lower_name.find("unordered_map") >= 0 or lower_name.find("map") >= 0:
-            return "map"
-
-        if lower_name.find("vector") >= 0 :
-            return "array"
-
-        if lower_name == "std::function":
-            return "func"
-        else:
-            return lower_name
-
     def js_ret_name_from_native(self, namespace_class_name, is_enum) :
         if self.is_cocos_class(namespace_class_name):
-            if namespace_class_name.find("cocos2d::Vector") >=0:
+            if namespace_class_name.find("cc::Vector") >=0:
                 return "new Array()"
-            if namespace_class_name.find("cocos2d::Map") >=0:
+            if namespace_class_name.find("cc::Map") >=0:
                 return "map_object"
             if is_enum:
                 return 0
@@ -1803,7 +1780,7 @@ def main():
     print 'Using userconfig \n ', userconfig.items('DEFAULT')
 
     clang_lib_path = os.path.join(userconfig.get('DEFAULT', 'cxxgeneratordir'), 'libclang')
-    cindex.Config.set_library_path(clang_lib_path);
+    cindex.Config.set_library_path(clang_lib_path)
 
     config = ConfigParser.SafeConfigParser()
     config.read(args[0])
@@ -1866,6 +1843,7 @@ def main():
                 'cpp_ns': config.get(s, 'cpp_namespace').split(' ') if config.has_option(s, 'cpp_namespace') else None,
                 'classes_have_no_parents': config.get(s, 'classes_have_no_parents'),
                 'base_classes_to_skip': config.get(s, 'base_classes_to_skip'),
+                'getter_setter': config.get(s, 'getter_setter')  if config.has_option(s, 'getter_setter') else "",
                 'abstract_classes': config.get(s, 'abstract_classes'),
                 'persistent_classes': config.get(s, 'persistent_classes') if config.has_option(s, 'persistent_classes') else None,
                 'classes_owned_by_cpp': config.get(s, 'classes_owned_by_cpp') if config.has_option(s, 'classes_owned_by_cpp') else None,

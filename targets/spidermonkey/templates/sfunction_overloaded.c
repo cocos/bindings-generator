@@ -26,6 +26,7 @@ static bool ${signature_name}(se::State& s)
             $arg_type arg${count};
                 #end if
             ${arg.to_native({"generator": $generator,
+                             "arg" : $arg,
                              "arg_type": $arg_type,
                              "in_value": "args[" + str(count) + "]",
                              "out_value": "arg" + str(count),
