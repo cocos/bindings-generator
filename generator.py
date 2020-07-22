@@ -1560,7 +1560,7 @@ class Generator(object):
         data = yaml.load(stream)
         self.config = data
         implfilepath = os.path.join(self.outdir, self.out_file + ".cpp")
-        headfilepath = os.path.join(self.outdir, self.out_file + ".hpp")
+        headfilepath = os.path.join(self.outdir, self.out_file + ".h")
 
         self.impl_file = open(implfilepath, "wb+")
         self.head_file = open(headfilepath, "wb+")
