@@ -18,27 +18,36 @@ static bool ${signature_name}(se::State& s)
         #if $func.min_args >= 0
         if (argc == $arg_idx) {
             #set $count = 0
+            #set arg_conv_array = []
             #while $count < $arg_idx
                 #set $arg = $func.arguments[$count]
                 #set $arg_type = $arg.to_string($generator)
-                #if $arg.is_numeric
+                #set conv_txt =  $arg.to_native({"generator": $generator, \
+                             "arg" : $arg,\
+                             "arg_type": $arg_type,\
+                             "in_value": "args[" + str(count) + "]",\
+                             "out_value": "arg" + str(count),\
+                             "class_name": $class_name,\
+                             "level": 3,\
+                             "is_static": False,\
+                             "is_persistent": $is_persistent,\
+                             "ntype": str($arg)})
+                #set arg_conv_array += [$conv_txt]
+                #if "seval_to_reference" in $conv_txt
+            $arg_type* arg${count} = nullptr;
+                #elif $arg.is_numeric
             ${arg_type} arg${count} = 0;
                 #elif $arg.is_pointer
             ${arg_type} arg${count} = nullptr;
                 #else
             ${arg_type} arg${count};
                 #end if
-            ${arg.to_native({"generator": $generator,
-                             "arg" : $arg,
-                             "arg_type": $arg_type,
-                             "in_value": "args[" + str(count) + "]",
-                             "out_value": "arg" + str(count),
-                             "class_name": $class_name,
-                             "level": 3,
-                             "is_static": False,
-                             "is_persistent": $is_persistent,
-                             "ntype": str($arg)})};
+            $conv_txt;            
+                #if "seval_to_reference" in $conv_txt
+                #set $arg_array += ["*arg"+str(count)]
+                #else
                 #set $arg_array += ["arg"+str(count)]
+                #end if
                 #set $count = $count + 1
             #if $arg_idx > 0 and arg_type != "bool"
             if (!ok) { ok = true; break; }
