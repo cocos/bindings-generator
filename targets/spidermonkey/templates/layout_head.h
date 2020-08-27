@@ -1,5 +1,5 @@
 #pragma once
-\#include "base/ccConfig.h"
+\#include "base/Config.h"
 #if $macro_judgement
 $macro_judgement
 #end if 
