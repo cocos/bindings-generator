@@ -4,7 +4,7 @@
 $macro_judgement
 #end if 
 
-\#include "cocos/scripting/js-bindings/jswrapper/SeApi.h"
+\#include "cocos/bindings/jswrapper/SeApi.h"
 #if $hpp_headers
 #for header in $hpp_headers
 \#include "${header}"
